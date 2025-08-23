@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Treasury Yield Curve • Demo</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  </head>
+  <body>
+    <main class="container">
+      <h1>Treasury Yield Curve <small id="asof" style="font-size: .6em; color: gray;"></small></h1>
+      <div class="date-picker-row">
+        <input
+            type="date"
+            id="datePicker"
+            min="2018-01-01"/>
+      </div>
+      <div class="grid">
+        <section>
+            <div class="chart-wrap">
+                <div id="chartLoading" class="chart-loading">Loading</div>
+                <canvas id="yc"></canvas>
+            </div>
+        </section>
+        <section class="sidebar">
+          <article>
+            <h3>Submit Order</h3>
+            <form method="POST" action="{{ url_for('create_order') }}">
+              <label for="term">Term</label>
+              <select id="term" name="term" required>
+                {% for _, label in [
+                    ('bc_1month','1 Mo'), ('bc_2month','2 Mo'), ('bc_3month','3 Mo'), ('bc_6month','6 Mo'),
+                    ('bc_1year','1 Yr'), ('bc_2year','2 Yr'), ('bc_3year','3 Yr'), ('bc_5year','5 Yr'),
+                    ('bc_7year','7 Yr'), ('bc_10year','10 Yr'), ('bc_20year','20 Yr'), ('bc_30year','30 Yr')
+                ] %}
+                  <option value="{{ label }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+              <label for="orderType">Order Type</label>
+                <select id="orderType" name="order_type" required>
+                <option value="MARKET" selected>Market</option>
+                <option value="LIMIT">Limit</option>
+                </select>
+
+              <label for="timing">Timing</label>
+                <select id="timing" name="timing" required>
+                <!-- options are injected by JS below -->
+              </select>
+              <div id="limitPriceRow" style="display:none">
+                <label for="limitPrice">Limit price (yield %)</label>
+                <input
+                  type="number"
+                  id="limitPrice"
+                  name="limit_price"
+                  step="0.001"
+                  min="0"
+                  max="20"
+                  placeholder="4.250" />
+              </div>
+              <label for="amount">Amount (USD)</label>
+              <input
+                type="number"
+                id="amount"
+                name="amount"
+                step="1000"
+                min="1000"
+                placeholder="1000"
+                required
+              />
+              <button type="submit">Place Order</button>
+            </form>
+          </article>
+          <article class="orders">
+            <h3>Order History</h3>
+            {% if orders %}
+              <table>
+                <thead><tr><th>When</th><th>Type</th><th>Timing</th><th>Limit</th><th>Executed</th><th>Term</th><th>Status</th><th>Purchase Price</th><th style="text-align:right">Amount</th></tr></thead>
+                <tbody>
+                {% for o in orders %}
+                  <tr>
+                    <td>{{ o.created_at[:19].replace('T',' ') }}Z</td>
+                    <td>{{ o.order_type }}</td>
+                    <td>{{ o.timing }}</td>
+                    <td>{{ o.limit_price if o.limit_price is not none else '-' }}</td>
+                    <td>{{ o.executed_price if o.executed_price is not none else '-' }}</td>
+                    <td>{{ o.term }}</td>
+                    <td>{{ o.status }}</td>
+                    <td>${{ '%.2f'|format(o.purchased_price) if o.purchased_price is not none else '-' }}</td>
+                    <td style="text-align:right">${{ '%.2f'|format(o.amount) }}</td>
+                  </tr>
+                {% endfor %}
+                </tbody>
+              </table>
+            {% else %}
+              <p>No orders yet. Submit your first order on the right.</p>
+            {% endif %}
+          </article>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      async function loadCurve(dateStr) {
+        const url = new URL("{{ url_for('api_yield_curve') }}", window.location.origin);
+        if (dateStr) url.searchParams.set('date', dateStr);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Failed to fetch yield curve');
+        return await res.json();
+      }
+      function showChartLoading() {
+        const el = document.getElementById('chartLoading');
+        if (el) el.style.display = 'flex';
+      }
+      function hideChartLoading() {
+        const el = document.getElementById('chartLoading');
+        if (el) el.style.display = 'none';
+      }
+
+      function chartConfig(labels, values) {
+        return {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Par Yield (%)',
+              data: values,
+              tension: 0.25,
+              fill: false,
+              pointRadius: 4,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { title: { display: true, text: 'Yield (%)' }, beginAtZero: false },
+              x: { title: { display: true, text: 'Maturity' } }
+            }
+          }
+        }
+      }
+      (function setupOrderTypeTiming() {
+        const typeSel   = document.getElementById('orderType');
+        const timingSel = document.getElementById('timing');
+        const limitRow  = document.getElementById('limitPriceRow');
+        const limitInp  = document.getElementById('limitPrice');
+        if (!typeSel || !timingSel || !limitRow || !limitInp) return;
+
+        function setTimingOptions() {
+            const t = typeSel.value;
+            timingSel.innerHTML = '';
+            const add = (v, text) => {
+            const o = document.createElement('option');
+            o.value = v; o.textContent = text;
+            timingSel.appendChild(o);
+            };
+
+            if (t === 'MARKET') {
+            add('DAY', 'Day only');
+            timingSel.disabled = true;
+            // Hide & clear limit price
+            limitRow.style.display = 'none';
+            limitInp.required = false;
+            limitInp.value = '';
+            } else {
+            add('DAY', 'Day only');
+            add('GTC', 'Good till canceled');
+            add('FOK', 'Fill or Kill');
+            timingSel.disabled = false;
+            // Show limit price
+            limitRow.style.display = '';
+            limitInp.required = true;
+            }
+        }
+
+        typeSel.addEventListener('change', setTimingOptions);
+        setTimingOptions(); // init on page load
+      })();
+      function localTodayStr() {
+        const d = new Date(); // local time
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`; // YYYY-MM-DD
+      }
+
+      function isWeekend(yyyy_mm_dd) {
+        // use noon to avoid TZ midnight edge cases
+        const d = new Date(yyyy_mm_dd + 'T12:00:00');
+        const dow = d.getDay(); // 0 Sun .. 6 Sat
+        return dow === 0 || dow === 6;
+      }
+
+      function previousBusinessDay(yyyy_mm_dd) {
+        const d = new Date(yyyy_mm_dd + 'T12:00:00');
+        while ([0, 6].includes(d.getDay())) d.setDate(d.getDate() - 1);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      }
+
+      let chart;
+      (async () => {
+        try {
+          showChartLoading();
+          const data = await loadCurve();
+          document.getElementById('asof').textContent = `as of ${data.date}`;
+          document.getElementById('datePicker').value = data.date;
+          document.getElementById('datePicker').max = localTodayStr();
+          const labels = data.points.map(p => p.term);
+          const values = data.points.map(p => p.value);
+          const ctx = document.getElementById('yc');
+          chart = new Chart(ctx, chartConfig(labels, values));
+        } catch (e) {
+          console.error(e);
+        } finally {
+          hideChartLoading();
+        }
+      })();
+      const dp = document.getElementById('datePicker');
+      dp.addEventListener('change', async (e) => {
+        const today = localTodayStr();
+        let selected = e.target.value;           // "YYYY-MM-DD"
+        if (!selected) return;
+
+        // Disallow future dates
+        if (selected > today) {
+            selected = today;
+            dp.value = selected;
+        }
+
+        // Disallow weekends → snap to previous business day
+        if (isWeekend(selected)) {
+            const prevBiz = previousBusinessDay(selected);
+            alert(`Weekends are not selectable. Using previous business day: ${prevBiz}`);
+            selected = prevBiz;
+            dp.value = selected;
+        }
+
+        try {
+            showChartLoading();
+            const data = await loadCurve(selected);             // your existing fetch
+            const served = String(data.date).slice(0, 10);      // normalize
+
+            // If user chose today but the API/DB returned a prior date, warn
+            if (selected === today && served !== today) {
+            alert('Data not yet released for today. Check back soon.');
+            }
+
+            // Update chart (same as you have)
+            const labels = data.points.map(p => p.term);
+            const values = data.points.map(p => p.value);
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = values;
+            chart.update();
+
+            // Snap input to the actual served business day
+            dp.value = served;
+        } catch (err) {
+            console.error(err);
+        } finally {
+          hideChartLoading();
+        }
+      });
+    </script>
+  </body>
+</html>

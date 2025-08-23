@@ -1,0 +1,105 @@
+.container { max-width: 1100px; margin: 2rem auto; }
+canvas { max-height: 420px; }
+
+.grid { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+
+@media (min-width: 900px) {
+  .grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;   /* chart | submit form */
+    gap: 1rem;
+    grid-auto-rows: min-content;
+  }
+
+  /* Flatten the second section so its articles are grid items */
+  .grid > section:nth-child(2) {
+    display: contents;
+  }
+
+  /* Default: both articles go into right-hand column */
+  .grid > section:nth-child(2) > article {
+    grid-column: 2;
+  }
+
+  /* But make the orders table span full width below both columns */
+  .grid > section:nth-child(2) > article.orders {
+    grid-column: 1 / -1;
+  }
+}
+
+.orders { max-height: 360px; overflow-y: auto; }
+code.k { font-weight: 600; }
+
+.date-picker-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;       /* space between label and input */
+    margin-bottom: 1rem;
+  }
+  
+  .date-picker-row input[type="date"] {
+    width: auto;       /* stop full-width stretching */
+    font-size: 0.85rem;
+    padding: 0.2rem 0.4rem;
+    line-height: 1.2;
+    height: 1.8rem;
+  }
+
+.sidebar {
+    font-size: 0.6rem;
+}
+.sidebar h3 {
+font-size: 1rem;
+}
+.sidebar table {
+font-size: 0.6rem;
+}
+.sidebar select,
+.sidebar button {
+  font-size: 0.6rem;
+  padding: 0.1rem 0.5rem; /* tighten up padding too if you like */
+}
+
+.sidebar input[type="number"] {
+    font-size: 0.6rem;
+    padding: 0.2rem 0.4rem;   /* smaller top/bottom padding */
+    line-height: 1.2;         /* tighter line height */
+    height: 1.8rem;           /* hard cap on height */
+    box-sizing: border-box;   /* ensures padding stays inside height */
+  }
+
+.chart-wrap {
+position: relative;
+width: 100%;
+/* explicitly set a height so overlay can center correctly */
+min-height: 420px;  /* match your canvas max-height */
+}
+
+.chart-wrap canvas {
+display: block;
+width: 100% !important;
+height: auto !important;
+max-height: 420px;
+}
+
+.chart-loading {
+position: absolute;
+top: 0; left: 0; right: 0; bottom: 0;
+display: none;
+display: flex;
+align-items: center;     /* vertical center */
+justify-content: center; /* horizontal center */
+background: rgba(255,255,255,0.6);
+backdrop-filter: blur(1px);
+font-weight: 600;
+z-index: 10;
+text-align: center;
+}
+.chart-loading::after {
+content: "";
+width: 28px; height: 28px; border-radius: 50%;
+border: 3px solid #999; border-top-color: transparent;
+margin-left: 10px;
+animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
