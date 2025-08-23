@@ -124,8 +124,8 @@ def fetch_yields_latest(date=None):
             target = date
             candidates = [r for r in records if r[0] <= target]
             last_record = candidates[-1] if candidates else records[-1]
-    except Exception:
-        print("oops")
+    except Exception as e:
+        print(e)
 
     if not last_record:
         # Fallback sample (dummy values)
