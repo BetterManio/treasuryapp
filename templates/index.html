@@ -177,18 +177,17 @@
         }
 
         typeSel.addEventListener('change', setTimingOptions);
-        setTimingOptions(); // init on page load
+        setTimingOptions();
       })();
       function localTodayStr() {
         const d = new Date(); // local time
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${day}`; // YYYY-MM-DD
+        return `${y}-${m}-${day}`;
       }
 
       function isWeekend(yyyy_mm_dd) {
-        // use noon to avoid TZ midnight edge cases
         const d = new Date(yyyy_mm_dd + 'T12:00:00');
         const dow = d.getDay(); // 0 Sun .. 6 Sat
         return dow === 0 || dow === 6;
@@ -208,7 +207,7 @@
         try {
           showChartLoading();
           const data = await loadCurve();
-          document.getElementById('asof').textContent = `as of ${data.date}`;
+          document.getElementById('asof').textContent = `updated just now`;
           document.getElementById('datePicker').value = data.date;
           document.getElementById('datePicker').max = localTodayStr();
           const labels = data.points.map(p => p.term);
@@ -224,7 +223,7 @@
       const dp = document.getElementById('datePicker');
       dp.addEventListener('change', async (e) => {
         const today = localTodayStr();
-        let selected = e.target.value;           // "YYYY-MM-DD"
+        let selected = e.target.value;
         if (!selected) return;
 
         // Disallow future dates
@@ -233,7 +232,6 @@
             dp.value = selected;
         }
 
-        // Disallow weekends → snap to previous business day
         if (isWeekend(selected)) {
             const prevBiz = previousBusinessDay(selected);
             alert(`Weekends are not selectable. Using previous business day: ${prevBiz}`);
@@ -243,22 +241,19 @@
 
         try {
             showChartLoading();
-            const data = await loadCurve(selected);             // your existing fetch
-            const served = String(data.date).slice(0, 10);      // normalize
+            const data = await loadCurve(selected);
+            const served = String(data.date).slice(0, 10);
 
-            // If user chose today but the API/DB returned a prior date, warn
             if (selected === today && served !== today) {
             alert('Data not yet released for today. Check back soon.');
             }
 
-            // Update chart (same as you have)
             const labels = data.points.map(p => p.term);
             const values = data.points.map(p => p.value);
             chart.data.labels = labels;
             chart.data.datasets[0].data = values;
             chart.update();
 
-            // Snap input to the actual served business day
             dp.value = served;
         } catch (err) {
             console.error(err);
