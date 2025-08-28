@@ -1,9 +1,23 @@
-from extensions import db
 import datetime as dt
-from decimal import Decimal
-from constants import YIELD_FIELDS
+
+from app.constants import YIELD_FIELDS
+from app.extensions import db
+
 
 class YieldDay(db.Model):
+    """
+    Stores Treasury yield curve data for a specific date.
+
+    Attributes:
+        id (int): Primary key.
+        date (date): The calendar date of the yield data.
+        data (JSON): Mapping of term → yield percent, e.g.
+            {
+                "1M": 5.12,
+                "2Y": 4.47,
+                "10Y": 3.95
+            }
+    """
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.Date, unique=True, nullable=False, index=True)
     data = db.Column(db.JSON, nullable=False)

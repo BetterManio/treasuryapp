@@ -19,8 +19,8 @@ YIELD_FIELDS: List[Tuple[str, str]] = [
 TERM_TO_DAYS = {
     "1 Mo": 30,
     "2 Mo": 60,
-    "3 Mo": 91,    # 13-week bill
-    "6 Mo": 182,   # 26-week bill
+    "3 Mo": 91,  # 13-week bill
+    "6 Mo": 182,  # 26-week bill
     "1 Yr": 365,
     "2 Yr": 2 * 365,
     "3 Yr": 3 * 365,

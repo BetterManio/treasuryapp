@@ -27,7 +27,7 @@
         <section class="sidebar">
           <article>
             <h3>Submit Order</h3>
-            <form method="POST" action="{{ url_for('create_order') }}">
+            <form method="POST" action="{{ url_for('orders.create_order') }}">
               <label for="term">Term</label>
               <select id="term" name="term" required>
                 {% for _, label in [
@@ -103,7 +103,7 @@
 
     <script>
       async function loadCurve(dateStr) {
-        const url = new URL("{{ url_for('api_yield_curve') }}", window.location.origin);
+        const url = new URL("{{ url_for('yields.api_yield_curve') }}", window.location.origin);
         if (dateStr) url.searchParams.set('date', dateStr);
         const res = await fetch(url);
         if (!res.ok) throw new Error('Failed to fetch yield curve');
