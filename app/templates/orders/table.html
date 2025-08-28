@@ -1,0 +1,32 @@
+<article class="orders">
+    <h3>Order History</h3>
+    {% if orders %}
+      <table>
+        <thead>
+          <tr>
+            <th>When</th><th>Type</th><th>Timing</th><th>Limit</th>
+            <th>Executed</th><th>Term</th><th>Status</th><th>Purchase Price</th>
+            <th style="text-align:right">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for o in orders %}
+          <tr>
+            <td>{{ o.created_at[:19].replace('T',' ') }}Z</td>
+            <td>{{ o.order_type }}</td>
+            <td>{{ o.timing }}</td>
+            <td>{{ o.limit_price if o.limit_price is not none else '-' }}</td>
+            <td>{{ o.executed_price if o.executed_price is not none else '-' }}</td>
+            <td>{{ o.term }}</td>
+            <td>{{ o.status }}</td>
+            <td>${{ '%.2f'|format(o.purchased_price) if o.purchased_price is not none else '-' }}</td>
+            <td class="text-right">${{ '%.2f'|format(o.amount) }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No orders yet. Submit your first order on the right.</p>
+    {% endif %}
+  </article>
+  

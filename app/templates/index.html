@@ -25,78 +25,8 @@
             </div>
         </section>
         <section class="sidebar">
-          <article>
-            <h3>Submit Order</h3>
-            <form method="POST" action="{{ url_for('orders.create_order') }}">
-              <label for="term">Term</label>
-              <select id="term" name="term" required>
-                {% for _, label in [
-                    ('bc_1month','1 Mo'), ('bc_2month','2 Mo'), ('bc_3month','3 Mo'), ('bc_6month','6 Mo'),
-                    ('bc_1year','1 Yr'), ('bc_2year','2 Yr'), ('bc_3year','3 Yr'), ('bc_5year','5 Yr'),
-                    ('bc_7year','7 Yr'), ('bc_10year','10 Yr'), ('bc_20year','20 Yr'), ('bc_30year','30 Yr')
-                ] %}
-                  <option value="{{ label }}">{{ label }}</option>
-                {% endfor %}
-              </select>
-              <label for="orderType">Order Type</label>
-                <select id="orderType" name="order_type" required>
-                <option value="MARKET" selected>Market</option>
-                <option value="LIMIT">Limit</option>
-                </select>
-
-              <label for="timing">Timing</label>
-                <select id="timing" name="timing" required>
-                <!-- options are injected by JS below -->
-              </select>
-              <div id="limitPriceRow" style="display:none">
-                <label for="limitPrice">Limit price (yield %)</label>
-                <input
-                  type="number"
-                  id="limitPrice"
-                  name="limit_price"
-                  step="0.001"
-                  min="0"
-                  max="20"
-                  placeholder="4.250" />
-              </div>
-              <label for="amount">Amount (USD)</label>
-              <input
-                type="number"
-                id="amount"
-                name="amount"
-                step="1000"
-                min="1000"
-                placeholder="1000"
-                required
-              />
-              <button type="submit">Place Order</button>
-            </form>
-          </article>
-          <article class="orders">
-            <h3>Order History</h3>
-            {% if orders %}
-              <table>
-                <thead><tr><th>When</th><th>Type</th><th>Timing</th><th>Limit</th><th>Executed</th><th>Term</th><th>Status</th><th>Purchase Price</th><th style="text-align:right">Amount</th></tr></thead>
-                <tbody>
-                {% for o in orders %}
-                  <tr>
-                    <td>{{ o.created_at[:19].replace('T',' ') }}Z</td>
-                    <td>{{ o.order_type }}</td>
-                    <td>{{ o.timing }}</td>
-                    <td>{{ o.limit_price if o.limit_price is not none else '-' }}</td>
-                    <td>{{ o.executed_price if o.executed_price is not none else '-' }}</td>
-                    <td>{{ o.term }}</td>
-                    <td>{{ o.status }}</td>
-                    <td>${{ '%.2f'|format(o.purchased_price) if o.purchased_price is not none else '-' }}</td>
-                    <td style="text-align:right">${{ '%.2f'|format(o.amount) }}</td>
-                  </tr>
-                {% endfor %}
-                </tbody>
-              </table>
-            {% else %}
-              <p>No orders yet. Submit your first order on the right.</p>
-            {% endif %}
-          </article>
+          {% include "orders/form.html" %}
+          {% include "orders/table.html" %}
         </section>
       </div>
     </main>
